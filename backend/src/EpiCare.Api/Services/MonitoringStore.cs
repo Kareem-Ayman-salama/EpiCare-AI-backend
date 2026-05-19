@@ -7,14 +7,16 @@ namespace EpiCare.Api.Services;
 public sealed class MonitoringStore
 {
     private readonly int _windowSize;
+    private readonly SignalPreprocessor _preprocessor;
     private readonly ConcurrentDictionary<string, PatientBuffer> _buffers = new();
     private readonly ConcurrentDictionary<string, PatientLatestState> _latest = new();
     private readonly ConcurrentDictionary<string, ConcurrentQueue<PatientAlert>> _alerts = new();
     private readonly ConcurrentDictionary<string, ConcurrentQueue<SeizureEvent>> _events = new();
 
-    public MonitoringStore(IOptions<AiModelOptions> options)
+    public MonitoringStore(IOptions<AiModelOptions> options, SignalPreprocessor preprocessor)
     {
         _windowSize = Math.Max(5, options.Value.WindowSize);
+        _preprocessor = preprocessor;
     }
 
     public int AddReading(SensorReadingDto reading)
@@ -32,12 +34,7 @@ public sealed class MonitoringStore
 
         var readings = buffer.Snapshot();
 
-        return new AiPredictionRequest
-        {
-            Eeg = readings.SelectMany(item => item.Eeg).ToArray(),
-            Ecg = readings.Select(item => item.Ecg).ToArray(),
-            Emg = readings.Select(item => item.Emg).ToArray()
-        };
+        return _preprocessor.BuildModelInput(readings);
     }
 
     public int GetWindowSampleCount(string patientId)

@@ -14,6 +14,11 @@ public sealed class DecisionService
 
     public MonitoringState Decide(AiPredictionResult prediction)
     {
+        if (prediction.FinalPrediction == 1)
+        {
+            return MonitoringState.Warning;
+        }
+
         var label = prediction.Label.Trim().ToLowerInvariant();
 
         if (label is "seizure" or "ictal")

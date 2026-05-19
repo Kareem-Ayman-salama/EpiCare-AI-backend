@@ -98,10 +98,34 @@ Body:
 
 ```json
 {
-  "eeg": [500, 510, 520],
-  "ecg": [72, 75, 81],
-  "emg": [20, 25, 32]
+  "eeg": [
+    [
+      [0.1, 0.2, "... 3840 samples"],
+      [0.1, 0.2, "... 3840 samples"]
+    ],
+    "... 8 windows"
+  ],
+  "ecg": [
+    [
+      [0.1, 0.2, "... 3840 samples"]
+    ],
+    "... 8 windows"
+  ],
+  "emg": [
+    [
+      [0.1, 0.2, "... 3840 samples"]
+    ],
+    "... 8 windows"
+  ]
 }
+```
+
+Model input shape:
+
+```text
+EEG: (8, 2, 3840)
+ECG: (8, 1, 3840)
+EMG: (8, 1, 3840)
 ```
 
 ## Demo Input Endpoint

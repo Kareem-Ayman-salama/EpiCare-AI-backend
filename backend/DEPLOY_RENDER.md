@@ -39,7 +39,12 @@ Environment variables:
 ASPNETCORE_ENVIRONMENT=Production
 AiModel__BaseUrl=https://web-production-bad93.up.railway.app
 AiModel__PredictPath=/predict
-AiModel__WindowSize=50
+AiModel__WindowSize=240
+AiModel__ModelWindowCount=8
+AiModel__ModelSamplesPerWindow=3840
+AiModel__ModelEegChannels=2
+AiModel__ModelEcgChannels=1
+AiModel__ModelEmgChannels=1
 AiModel__HighRiskThreshold=0.7
 ```
 

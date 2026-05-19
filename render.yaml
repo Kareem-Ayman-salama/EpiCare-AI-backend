@@ -14,6 +14,16 @@ services:
       - key: AiModel__PredictPath
         value: /predict
       - key: AiModel__WindowSize
-        value: 50
+        value: 240
+      - key: AiModel__ModelWindowCount
+        value: 8
+      - key: AiModel__ModelSamplesPerWindow
+        value: 3840
+      - key: AiModel__ModelEegChannels
+        value: 2
+      - key: AiModel__ModelEcgChannels
+        value: 1
+      - key: AiModel__ModelEmgChannels
+        value: 1
       - key: AiModel__HighRiskThreshold
         value: 0.7

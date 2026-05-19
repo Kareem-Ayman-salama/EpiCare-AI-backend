@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.SignalR;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<AiModelOptions>(builder.Configuration.GetSection("AiModel"));
+builder.Services.AddSingleton<SignalPreprocessor>();
 builder.Services.AddSingleton<MonitoringStore>();
 builder.Services.AddSingleton<DecisionService>();
 builder.Services.AddHttpClient<AiPredictionClient>((serviceProvider, client) =>

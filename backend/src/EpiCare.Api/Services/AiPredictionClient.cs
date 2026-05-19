@@ -73,14 +73,27 @@ public sealed class AiPredictionClient
             };
         }
 
-        var label = ReadString(obj, "label", "prediction", "class", "state", "status") ?? "Normal";
-        var probability = ReadDouble(obj, "probability", "confidence", "risk_score", "score") ?? 0;
+        var finalPrediction = ReadInt(obj, "final_prediction", "finalPrediction", "prediction");
+        var triggered = ReadBool(obj, "triggered");
+        var triggerProbability = ReadDouble(obj, "trigger_probability", "triggerProbability");
+        var fusionProbability = ReadDouble(obj, "fusion_probability", "fusionProbability");
+        var label = ReadString(obj, "label", "prediction", "class", "state", "status");
+        var probability = fusionProbability
+            ?? triggerProbability
+            ?? ReadDouble(obj, "probability", "confidence", "risk_score", "score")
+            ?? 0;
         var processingTime = ReadDouble(obj, "processing_time_ms", "processingTimeMs", "processing_time", "latency_ms") ?? elapsedMs;
+        var message = ReadString(obj, "message");
 
         return new AiPredictionResult
         {
-            Label = NormalizeLabel(label),
+            Label = NormalizeLabel(label, finalPrediction),
             Probability = probability,
+            Triggered = triggered,
+            TriggerProbability = triggerProbability,
+            FusionProbability = fusionProbability,
+            FinalPrediction = finalPrediction,
+            Message = message,
             ProcessingTimeMs = processingTime,
             Source = "ai",
             Raw = raw
@@ -124,8 +137,71 @@ public sealed class AiPredictionClient
         return null;
     }
 
-    private static string NormalizeLabel(string label)
+    private static int? ReadInt(JsonObject obj, params string[] keys)
     {
+        foreach (var key in keys)
+        {
+            if (!obj.TryGetPropertyValue(key, out var value) || value is null)
+            {
+                continue;
+            }
+
+            if (value is JsonValue jsonValue &&
+                jsonValue.TryGetValue<int>(out var number))
+            {
+                return number;
+            }
+
+            if (int.TryParse(value.ToString(), out var parsed))
+            {
+                return parsed;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool? ReadBool(JsonObject obj, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (!obj.TryGetPropertyValue(key, out var value) || value is null)
+            {
+                continue;
+            }
+
+            if (value is JsonValue jsonValue &&
+                jsonValue.TryGetValue<bool>(out var boolean))
+            {
+                return boolean;
+            }
+
+            if (bool.TryParse(value.ToString(), out var parsedBool))
+            {
+                return parsedBool;
+            }
+
+            if (int.TryParse(value.ToString(), out var parsedInt))
+            {
+                return parsedInt != 0;
+            }
+        }
+
+        return null;
+    }
+
+    private static string NormalizeLabel(string? label, int? finalPrediction)
+    {
+        if (finalPrediction is not null)
+        {
+            return finalPrediction == 1 ? "Warning" : "Normal";
+        }
+
+        if (string.IsNullOrWhiteSpace(label))
+        {
+            return "Normal";
+        }
+
         var normalized = label.Trim().ToLowerInvariant();
         return normalized switch
         {

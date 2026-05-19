@@ -30,10 +30,10 @@ class _SeizurePredictionScreenState extends ConsumerState<SeizurePredictionScree
     try {
       final service = ref.read(predictionApiServiceProvider);
       final result = await service.predict(
-        const PredictionRequest(
-          eeg: [0.12, 0.18, 0.44, 0.33, 0.21],
-          ecg: [0.72, 0.76, 0.81, 0.74, 0.70],
-          emg: [0.05, 0.09, 0.13, 0.11, 0.08],
+        PredictionRequest(
+          eeg: _mockTensor(windowCount: 8, channelCount: 2, sampleCount: 3840, seed: .12),
+          ecg: _mockTensor(windowCount: 8, channelCount: 1, sampleCount: 3840, seed: .72),
+          emg: _mockTensor(windowCount: 8, channelCount: 1, sampleCount: 3840, seed: .05),
         ),
       );
       setState(() => _result = result);
@@ -44,6 +44,24 @@ class _SeizurePredictionScreenState extends ConsumerState<SeizurePredictionScree
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  List<List<List<num>>> _mockTensor({
+    required int windowCount,
+    required int channelCount,
+    required int sampleCount,
+    required double seed,
+  }) {
+    return List.generate(
+      windowCount,
+      (window) => List.generate(
+        channelCount,
+        (channel) => List.generate(
+          sampleCount,
+          (sample) => seed + (window * .01) + (channel * .02) + ((sample % 32) * .001),
+        ),
+      ),
+    );
   }
 
   @override

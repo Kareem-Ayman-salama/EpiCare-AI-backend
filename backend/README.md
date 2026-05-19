@@ -30,18 +30,21 @@ Configured by environment variables:
 ```text
 AiModel__BaseUrl=https://web-production-bad93.up.railway.app
 AiModel__PredictPath=/predict
-AiModel__WindowSize=50
+AiModel__WindowSize=240
+AiModel__ModelWindowCount=8
+AiModel__ModelSamplesPerWindow=3840
+AiModel__ModelEegChannels=2
+AiModel__ModelEcgChannels=1
+AiModel__ModelEmgChannels=1
 AiModel__HighRiskThreshold=0.7
 ```
 
 The model request is:
 
-```json
-{
-  "eeg": [500, 510, 520],
-  "ecg": [72, 75, 81],
-  "emg": [20, 25, 32]
-}
+```text
+EEG shape: (8, 2, 3840)
+ECG shape: (8, 1, 3840)
+EMG shape: (8, 1, 3840)
 ```
 
 The backend accepts Proteus single-sample readings and builds the model window internally.

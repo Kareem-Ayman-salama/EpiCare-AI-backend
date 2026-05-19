@@ -5,9 +5,9 @@ class PredictionRequest {
     required this.emg,
   });
 
-  final List<num> eeg;
-  final List<num> ecg;
-  final List<num> emg;
+  final List<List<List<num>>> eeg;
+  final List<List<List<num>>> ecg;
+  final List<List<List<num>>> emg;
 
   Map<String, dynamic> toJson() {
     return {
