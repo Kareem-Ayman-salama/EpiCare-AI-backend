@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: epicare-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./src/EpiCare.Api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: AiModel__BaseUrl
+        value: https://web-production-bad93.up.railway.app
+      - key: AiModel__PredictPath
+        value: /predict
+      - key: AiModel__WindowSize
+        value: 50
+      - key: AiModel__HighRiskThreshold
+        value: 0.7

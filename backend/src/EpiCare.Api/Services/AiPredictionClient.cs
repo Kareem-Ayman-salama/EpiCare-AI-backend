@@ -1,0 +1,168 @@
+using System.Diagnostics;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using EpiCare.Api.Models;
+using Microsoft.Extensions.Options;
+
+namespace EpiCare.Api.Services;
+
+public sealed class AiPredictionClient
+{
+    private readonly HttpClient _httpClient;
+    private readonly AiModelOptions _options;
+    private readonly ILogger<AiPredictionClient> _logger;
+
+    public AiPredictionClient(
+        HttpClient httpClient,
+        IOptions<AiModelOptions> options,
+        ILogger<AiPredictionClient> logger)
+    {
+        _httpClient = httpClient;
+        _options = options.Value;
+        _logger = logger;
+    }
+
+    public async Task<AiPredictionResult> PredictAsync(
+        AiPredictionRequest request,
+        SensorReadingDto latestReading,
+        CancellationToken cancellationToken)
+    {
+        if (request.Eeg.Count == 0 || request.Ecg.Count == 0 || request.Emg.Count == 0)
+        {
+            return BuildFallback(latestReading, "fallback-empty-window");
+        }
+
+        try
+        {
+            var stopwatch = Stopwatch.StartNew();
+            using var response = await _httpClient.PostAsJsonAsync(
+                _options.PredictPath,
+                request,
+                cancellationToken);
+
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            stopwatch.Stop();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("AI model returned {StatusCode}: {Body}", response.StatusCode, body);
+                return BuildFallback(latestReading, "fallback-ai-http-error");
+            }
+
+            var raw = JsonNode.Parse(body);
+            return ParsePrediction(raw, stopwatch.Elapsed.TotalMilliseconds);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "AI model request failed. Falling back to simulator state.");
+            return BuildFallback(latestReading, "fallback-ai-exception");
+        }
+    }
+
+    private AiPredictionResult ParsePrediction(JsonNode? raw, double elapsedMs)
+    {
+        if (raw is not JsonObject obj)
+        {
+            return new AiPredictionResult
+            {
+                Label = "Normal",
+                Probability = 0,
+                ProcessingTimeMs = elapsedMs,
+                Source = "ai",
+                Raw = raw
+            };
+        }
+
+        var label = ReadString(obj, "label", "prediction", "class", "state", "status") ?? "Normal";
+        var probability = ReadDouble(obj, "probability", "confidence", "risk_score", "score") ?? 0;
+        var processingTime = ReadDouble(obj, "processing_time_ms", "processingTimeMs", "processing_time", "latency_ms") ?? elapsedMs;
+
+        return new AiPredictionResult
+        {
+            Label = NormalizeLabel(label),
+            Probability = probability,
+            ProcessingTimeMs = processingTime,
+            Source = "ai",
+            Raw = raw
+        };
+    }
+
+    private static string? ReadString(JsonObject obj, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (obj.TryGetPropertyValue(key, out var value) && value is not null)
+            {
+                return value.ToString();
+            }
+        }
+
+        return null;
+    }
+
+    private static double? ReadDouble(JsonObject obj, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (!obj.TryGetPropertyValue(key, out var value) || value is null)
+            {
+                continue;
+            }
+
+            if (value is JsonValue jsonValue &&
+                jsonValue.TryGetValue<double>(out var number))
+            {
+                return number;
+            }
+
+            if (double.TryParse(value.ToString(), out var parsed))
+            {
+                return parsed;
+            }
+        }
+
+        return null;
+    }
+
+    private static string NormalizeLabel(string label)
+    {
+        var normalized = label.Trim().ToLowerInvariant();
+        return normalized switch
+        {
+            "p" or "prediction" or "warning" or "preictal" => "Warning",
+            "s" or "seizure" or "ictal" => "Seizure",
+            "n" or "normal" or "safe" => "Normal",
+            _ => label
+        };
+    }
+
+    private static AiPredictionResult BuildFallback(SensorReadingDto reading, string source)
+    {
+        var normalizedState = reading.State?.Trim().ToUpperInvariant();
+
+        return normalizedState switch
+        {
+            "S" or "SEIZURE" => new AiPredictionResult
+            {
+                Label = "Seizure",
+                Probability = 0.95,
+                Source = source,
+                Raw = new { reason = "simulator_state", state = reading.State }
+            },
+            "P" or "WARNING" or "PREDICTION" => new AiPredictionResult
+            {
+                Label = "Warning",
+                Probability = 0.82,
+                Source = source,
+                Raw = new { reason = "simulator_state", state = reading.State }
+            },
+            _ => new AiPredictionResult
+            {
+                Label = "Normal",
+                Probability = 0.05,
+                Source = source,
+                Raw = new { reason = "simulator_state", state = reading.State }
+            }
+        };
+    }
+}
