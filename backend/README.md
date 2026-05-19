@@ -55,6 +55,7 @@ Replace `{baseUrl}` with your deployed URL.
 
 ```http
 GET  {baseUrl}/api/health
+GET  {baseUrl}/api/seizure/latest
 GET  {baseUrl}/api/patients/demo-patient/latest
 GET  {baseUrl}/api/patients/demo-patient/readings/latest?take=50
 GET  {baseUrl}/api/patients/demo-patient/alerts
@@ -135,7 +136,13 @@ dotnet run --project src/EpiCare.IoTBridge -- --port COM3 --backend http://local
 For deployed backend:
 
 ```powershell
-dotnet run --project src/EpiCare.IoTBridge -- --port COM3 --backend https://epicare-api.onrender.com --patient demo-patient
+dotnet run --project src\EpiCare.IoTBridge -- --port COM3 --backend https://epicare-api-production.up.railway.app --patient demo-patient
+```
+
+If the Arduino sketch is reading commands back from serial, enable closed-loop output:
+
+```powershell
+dotnet run --project src\EpiCare.IoTBridge -- --port COM3 --backend https://epicare-api-production.up.railway.app --patient demo-patient --write-command true
 ```
 
 ## Deploy to Render
@@ -160,4 +167,5 @@ https://YOUR-RENDER-SERVICE.onrender.com
 
 - Current storage is in-memory for fast demo deployment. It resets when the free server sleeps/restarts.
 - Add PostgreSQL later for permanent history.
-- The backend uses AI output when available. If the AI API fails or returns unexpected data, it falls back to simulator `state` so demos do not break.
+- The backend accepts embedded commands as `N`, `P`, and `S`.
+- The backend uses AI output when available. For Proteus demos, simulator `state: "P"` / `state: "S"` and ACC readings can force warning/seizure behavior so the demo remains controllable.

@@ -3,13 +3,13 @@
 Give the Flutter developer the deployed API base URL:
 
 ```text
-https://YOUR-RENDER-SERVICE.onrender.com
+https://epicare-api-production.up.railway.app
 ```
 
 In Flutter, configure it with:
 
 ```powershell
-flutter run --dart-define=EPICARE_API_BASE_URL=https://YOUR-RENDER-SERVICE.onrender.com
+flutter run --dart-define=EPICARE_API_BASE_URL=https://epicare-api-production.up.railway.app
 ```
 
 ## States
@@ -19,6 +19,14 @@ flutter run --dart-define=EPICARE_API_BASE_URL=https://YOUR-RENDER-SERVICE.onren
 1 = Warning
 2 = Seizure
 3 = Offline
+```
+
+Embedded command codes:
+
+```text
+N = Normal
+P = Warning / high seizure risk
+S = Seizure detected
 ```
 
 ## Main Endpoints
@@ -33,6 +41,34 @@ GET /api/health
 
 Use this for the patient home status card.
 
+Recommended compact endpoint:
+
+```http
+GET /api/seizure/latest
+```
+
+Example response:
+
+```json
+{
+  "prediction": {
+    "state": "SEIZURE_DETECTED",
+    "code": "S",
+    "probability": 0.85
+  },
+  "sensors": {
+    "eeg": [512, 510],
+    "ecg": 345,
+    "emg": 278,
+    "acc": [2.1, -1.4, 980]
+  },
+  "timestamp": "2026-05-19T14:30:00Z",
+  "deviceId": "proteus-01"
+}
+```
+
+Full monitoring endpoint:
+
 ```http
 GET /api/patients/demo-patient/latest
 ```
@@ -44,7 +80,7 @@ Example response:
   "patientId": "demo-patient",
   "deviceId": "manual-test",
   "state": 2,
-  "command": "SEIZURE",
+  "command": "S",
   "latestReading": {
     "eeg": [610, 548],
     "ecg": 64,
@@ -189,6 +225,15 @@ final dio = Dio(BaseOptions(
 final response = await dio.get('/api/patients/demo-patient/latest');
 final data = response.data as Map<String, dynamic>;
 final state = data['state'] as int;
+```
+
+Compact latest endpoint:
+
+```dart
+final response = await dio.get('/api/seizure/latest');
+final data = response.data as Map<String, dynamic>;
+final prediction = data['prediction'] as Map<String, dynamic>;
+final commandCode = prediction['code'] as String; // N, P, or S
 ```
 
 ## Realtime Later

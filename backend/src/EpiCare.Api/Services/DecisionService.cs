@@ -12,8 +12,24 @@ public sealed class DecisionService
         _options = options.Value;
     }
 
-    public MonitoringState Decide(AiPredictionResult prediction)
+    public MonitoringState Decide(AiPredictionResult prediction, SensorReadingDto? latestReading = null)
     {
+        var simulatorState = latestReading?.State?.Trim().ToUpperInvariant();
+        if (simulatorState is "S" or "SEIZURE")
+        {
+            return MonitoringState.Seizure;
+        }
+
+        if (simulatorState is "P" or "WARNING" or "PREDICTION")
+        {
+            return MonitoringState.Warning;
+        }
+
+        if (latestReading?.Acc is { Count: >= 3 })
+        {
+            return MonitoringState.Seizure;
+        }
+
         if (prediction.FinalPrediction == 1)
         {
             return MonitoringState.Warning;
@@ -43,10 +59,36 @@ public sealed class DecisionService
     {
         return state switch
         {
-            MonitoringState.Warning => "WARNING",
-            MonitoringState.Seizure => "SEIZURE",
+            MonitoringState.Warning => "P",
+            MonitoringState.Seizure => "S",
+            _ => "N"
+        };
+    }
+
+    public string ToApplicationState(MonitoringState state)
+    {
+        return state switch
+        {
+            MonitoringState.Warning => "HIGH_RISK",
+            MonitoringState.Seizure => "SEIZURE_DETECTED",
             MonitoringState.Offline => "OFFLINE",
             _ => "NORMAL"
+        };
+    }
+
+    public double ToApplicationProbability(MonitoringState state, AiPredictionResult? prediction)
+    {
+        var probability = prediction?.FusionProbability
+            ?? prediction?.TriggerProbability
+            ?? prediction?.Probability
+            ?? 0;
+
+        return state switch
+        {
+            MonitoringState.Seizure => Math.Max(probability, 0.85),
+            MonitoringState.Warning => Math.Max(probability, _options.HighRiskThreshold),
+            MonitoringState.Offline => 0,
+            _ => probability
         };
     }
 }

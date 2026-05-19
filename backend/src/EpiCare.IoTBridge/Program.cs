@@ -52,8 +52,8 @@ while (true)
         var command = TryReadDeviceCommand(responseBody);
         Console.ForegroundColor = command switch
         {
-            "SEIZURE" => ConsoleColor.Red,
-            "WARNING" => ConsoleColor.Yellow,
+            "S" or "SEIZURE" => ConsoleColor.Red,
+            "P" or "WARNING" => ConsoleColor.Yellow,
             _ => ConsoleColor.Green
         };
         Console.WriteLine($"{DateTime.Now:HH:mm:ss.fff} -> {command} | {rawLine}");

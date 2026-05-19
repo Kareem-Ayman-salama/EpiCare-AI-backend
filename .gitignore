@@ -1,0 +1,29 @@
+# Build output
+**/bin/
+**/obj/
+sketch_may19a/build/
+firmware/build/
+
+# IDE/editor files
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Local installed tools and installers
+Arduino IDE/
+Proteus 8 Professional/
+arduino-ide_*.exe
+
+# Proteus backups/local workspace files
+*.pdsbak
+*.workspace
+
+# Local demo export package
+EpiCare_Demo_Laptop/
+EpiCare_Demo_Laptop.zip
+
+# OS/temp files
+.DS_Store
+Thumbs.db
+*.tmp

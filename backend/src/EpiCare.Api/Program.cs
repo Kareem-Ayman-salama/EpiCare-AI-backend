@@ -92,7 +92,7 @@ app.MapPost("/api/iot/readings", async (
 
     var window = store.BuildWindow(reading.PatientId);
     var prediction = await aiClient.PredictAsync(window, reading, cancellationToken);
-    var state = decisionService.Decide(prediction);
+    var state = decisionService.Decide(prediction, reading);
     var command = decisionService.ToDeviceCommand(state);
 
     var latest = new PatientLatestState
@@ -205,6 +205,58 @@ app.MapGet("/api/patients/{patientId}/seizure-events", (
     string patientId,
     MonitoringStore store) => Results.Ok(store.GetEvents(patientId)));
 
+app.MapGet("/api/seizure/latest", (
+    string? patientId,
+    MonitoringStore store,
+    DecisionService decisionService) =>
+{
+    var resolvedPatientId = string.IsNullOrWhiteSpace(patientId) ? "demo-patient" : patientId;
+    var latest = store.GetLatest(resolvedPatientId);
+
+    if (latest is null)
+    {
+        return Results.Ok(BuildSeizureLatestResponse(
+            new PatientLatestState
+            {
+                PatientId = resolvedPatientId,
+                State = MonitoringState.Offline,
+                Command = decisionService.ToDeviceCommand(MonitoringState.Offline),
+                UpdatedAt = DateTimeOffset.UtcNow,
+                IsConnected = false
+            },
+            decisionService));
+    }
+
+    return Results.Ok(BuildSeizureLatestResponse(latest, decisionService));
+});
+
 app.MapHub<PatientMonitoringHub>("/hubs/patient-monitoring");
 
 app.Run();
+
+static object BuildSeizureLatestResponse(
+    PatientLatestState latest,
+    DecisionService decisionService)
+{
+    var reading = latest.LatestReading;
+    var code = decisionService.ToDeviceCommand(latest.State);
+
+    return new
+    {
+        prediction = new
+        {
+            state = decisionService.ToApplicationState(latest.State),
+            code,
+            probability = decisionService.ToApplicationProbability(latest.State, latest.Prediction)
+        },
+        sensors = new
+        {
+            eeg = reading?.Eeg ?? Array.Empty<double>(),
+            ecg = reading?.Ecg ?? 0,
+            emg = reading?.Emg ?? 0,
+            acc = reading?.Acc
+        },
+        timestamp = reading?.CapturedAt ?? latest.UpdatedAt,
+        deviceId = string.IsNullOrWhiteSpace(latest.DeviceId) ? "proteus-01" : latest.DeviceId
+    };
+}
