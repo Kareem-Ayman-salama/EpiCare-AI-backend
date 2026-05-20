@@ -23,6 +23,20 @@ arduino-ide_*.exe
 EpiCare_Demo_Laptop/
 EpiCare_Demo_Laptop.zip
 
+# Generated reports and local handoff artifacts
+epicare_report_render*/
+*_report_render*/
+make_*_report_docx.py
+*Handoff_Report.docx
+
+# Python cache from report tooling
+__pycache__/
+*.py[cod]
+
+# Flutter local output
+.dart_tool/
+build/
+
 # OS/temp files
 .DS_Store
 Thumbs.db
